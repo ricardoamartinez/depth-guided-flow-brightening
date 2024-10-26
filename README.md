@@ -4,33 +4,6 @@
 
 Create a processing pipeline that estimates optical flow in a video and brightens high-flow regions, ensuring that motion close to the camera appears brighter than motion farther away.
 
-## **Project Structure**
-
-depth-guided-flow-brightening/
-├── data/
-│   ├── input_video.mp4
-│   ├── depth_maps/
-│   │   ├── frame_0000001.png
-│   │   ├── frame_0000002.png
-│   │   └── ...
-├── src/
-│   ├── __init__.py
-│   ├── optical_flow.py
-│   ├── brightening.py
-│   ├── depth_refinement.py
-│   ├── video_processing.py
-│   └── utils.py
-├── tests/
-│   ├── test_optical_flow.py
-│   ├── test_brightening.py
-│   └── ...
-├── output/
-│   └── output_video.mp4
-├── README.md
-├── requirements.txt
-└── setup.py
-
-
 ## **Installation**
 
 1. **Clone the Repository**
