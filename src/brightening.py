@@ -25,8 +25,7 @@ class Brightener:
         Returns:
             np.ndarray: Flow magnitude of shape (H, W).
         """
-        mag = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
-        return mag
+        return np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
 
     def brighten_regions(self, frame: np.ndarray, flow_magnitude: np.ndarray) -> np.ndarray:
         """
@@ -43,8 +42,7 @@ class Brightener:
         norm_mag = cv2.normalize(flow_magnitude, None, 0, 1, cv2.NORM_MINMAX)
         
         # Create a brightening mask
-        bright_mask = norm_mag * self.alpha + self.beta
-        bright_mask = np.clip(bright_mask, 0, 1)
+        bright_mask = np.clip(norm_mag * self.alpha + self.beta, 0, 1)
 
         # Convert mask to 3 channels
         bright_mask_3ch = np.repeat(bright_mask[:, :, np.newaxis], 3, axis=2)
@@ -53,3 +51,7 @@ class Brightener:
         brightened_frame = cv2.convertScaleAbs(frame * (1 + bright_mask_3ch))
 
         return brightened_frame
+
+    def process(self, frame: np.ndarray, flow: np.ndarray) -> np.ndarray:
+        flow_magnitude = self.compute_flow_magnitude(flow)
+        return self.brighten_regions(frame, flow_magnitude)
