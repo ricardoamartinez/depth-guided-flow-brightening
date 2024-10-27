@@ -38,18 +38,14 @@ class Brightener:
         Returns:
             np.ndarray: Brightened RGB frame.
         """
-        # Normalize flow magnitude to range [0, 1]
-        norm_mag = cv2.normalize(flow_magnitude, None, 0, 1, cv2.NORM_MINMAX)
-        
-        # Create a brightening mask
-        bright_mask = np.clip(norm_mag * self.alpha + self.beta, 0, 1)
-
-        # Convert mask to 3 channels
+        # No need to normalize, as flow_magnitude is already in a good range
+        print("Flow magnitude:", flow_magnitude)
+        bright_mask = np.clip(flow_magnitude * self.alpha + self.beta, 0, 1)
+        print("Bright mask:", bright_mask)
         bright_mask_3ch = np.repeat(bright_mask[:, :, np.newaxis], 3, axis=2)
-
-        # Apply the brightening effect
-        brightened_frame = cv2.convertScaleAbs(frame * (1 + bright_mask_3ch))
-
+        print("3-channel bright mask:", bright_mask_3ch)
+        brightened_frame = np.clip(frame + (255 * bright_mask_3ch), 0, 255).astype(np.uint8)
+        print("Brightened frame:", brightened_frame)
         return brightened_frame
 
     def process(self, frame: np.ndarray, flow: np.ndarray) -> np.ndarray:

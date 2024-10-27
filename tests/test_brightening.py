@@ -2,7 +2,13 @@
 
 import unittest
 import numpy as np
-from src.brightening import Brightener
+import sys
+import os
+
+# Add the src directory to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
+
+from brightening import Brightener
 
 class TestBrightener(unittest.TestCase):
     def setUp(self):
@@ -17,8 +23,12 @@ class TestBrightener(unittest.TestCase):
 
     def test_brighten_regions(self):
         flow_magnitude = self.brightener.compute_flow_magnitude(self.flow)
+        print("Flow magnitude:", flow_magnitude)
         brightened = self.brightener.brighten_regions(self.frame, flow_magnitude)
-        expected = np.ones_like(self.frame) * 255
+        print("Brightened frame:", brightened)
+        # The expected output should be 255 * (1 + sqrt(2)), clipped to 255
+        expected = np.ones_like(self.frame) * min(255, 255 * (1 + np.sqrt(2)))
+        print("Expected:", expected)
         np.testing.assert_array_equal(brightened, expected)
 
     def test_process(self):

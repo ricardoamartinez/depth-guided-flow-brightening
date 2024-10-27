@@ -17,10 +17,11 @@ def extract_frames(video_path: str) -> List[np.ndarray]:
     """
     cap = cv2.VideoCapture(video_path)
     frames = []
-    success, frame = cap.read()
-    while success:
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
         frames.append(frame)
-        success, frame = cap.read()
     cap.release()
     return frames
 
@@ -37,12 +38,19 @@ def save_video(frames: List[np.ndarray], output_path: str, fps: int = 60):
         raise ValueError("No frames to save.")
 
     height, width, layers = frames[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    video = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Use mp4v codec
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
     for frame in frames:
-        video.write(frame)
-    video.release()
+        out.write(frame)
+
+    out.release()
+
+    # Verify the video was saved correctly
+    cap = cv2.VideoCapture(output_path)
+    if not cap.isOpened():
+        raise IOError(f"Failed to open the saved video at {output_path}")
+    cap.release()
 
 def load_depth_maps(depth_dir: str) -> List[np.ndarray]:
     """

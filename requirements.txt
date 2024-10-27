@@ -1,4 +1,8 @@
 numpy
 opencv-python
-torch
+torch>=1.6
+torchvision>=0.7
+tensorboard
+matplotlib
+tqdm
 unittest

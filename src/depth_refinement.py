@@ -34,6 +34,9 @@ class DepthRefiner:
         depth = depth * self.far  # Scale to [0, far] meters
         return depth
 
+    def normalize_depth(self, depth_map: np.ndarray) -> np.ndarray:
+        return (depth_map - self.near) / (self.far - self.near)
+
     def refine_brightening(self, bright_mask: np.ndarray, depth_map: np.ndarray) -> np.ndarray:
         """
         Refine the brightening mask based on depth.
@@ -45,14 +48,15 @@ class DepthRefiner:
         Returns:
             np.ndarray: Refined brightening mask [0, 1].
         """
-        # Invert depth: closer objects have higher influence
-        depth_factor = 1 - ((depth_map - self.near) / (self.far - self.near))
-        depth_factor = np.clip(depth_factor, 0, 1)
-
-        # Multiply bright mask with depth factor
+        # Resize depth_map to match bright_mask dimensions
+        if depth_map.shape != bright_mask.shape:
+            depth_map = cv2.resize(depth_map, (bright_mask.shape[1], bright_mask.shape[0]), interpolation=cv2.INTER_LINEAR)
+        
+        normalized_depth = self.normalize_depth(depth_map)
+        depth_factor = 1 - normalized_depth
         refined_mask = bright_mask * depth_factor
-
-        # Normalize again to [0, 1]
-        refined_mask = cv2.normalize(refined_mask, None, 0, 1, cv2.NORM_MINMAX)
-
         return refined_mask
+
+    def process(self, bright_mask: np.ndarray, depth_path: str) -> np.ndarray:
+        depth_map = self.load_depth_map(depth_path)
+        return self.refine_brightening(bright_mask, depth_map)
