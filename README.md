@@ -313,11 +313,3 @@ python -m unittest discover -s tests
 ```
 
 ---
-
-## **Final Notes**
-
-Feel free to explore, modify, and extend this project to better suit specific requirements or to incorporate additional functionalities that showcase advanced skills in computer vision and machine learning.
-
----
-
----
