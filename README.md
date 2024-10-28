@@ -9,21 +9,19 @@ Create a processing pipeline that estimates optical flow in a video and brighten
 ## **Table of Contents**
 
 1. [Overview](#overview)
-2. [Features](#features)
-3. [Project Structure](#project-structure)
-4. [Installation](#installation)
-5. [Usage](#usage)
-6. [Processing Steps](#processing-steps)
+2. [Project Structure](#project-structure)
+3. [Installation](#installation)
+4. [Usage](#usage)
+5. [Processing Steps](#processing-steps)
     - [1. Optical Flow Estimation](#1-optical-flow-estimation)
     - [2. Brightening High-Flow Regions](#2-brightening-high-flow-regions)
     - [3. Depth-Guided Brightening](#3-depth-guided-brightening)
     - [4. Exporting the Modified Video](#4-exporting-the-modified-video)
-7. [Performance Metrics](#performance-metrics)
-8. [Trade-offs, Assumptions, and Limitations](#trade-offs-assumptions-and-limitations)
-9. [Optional Extensions](#optional-extensions)
-10. [Future Work](#future-work)
-11. [Contact](#contact)
-12. [License](#license)
+6. [Performance Metrics](#performance-metrics)
+7. [Trade-offs, Assumptions, and Limitations](#trade-offs-assumptions-and-limitations)
+8. [Optional Extensions](#optional-extensions)
+9. [Contact](#contact)
+10. [License](#license)
 
 ---
 
