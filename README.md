@@ -232,20 +232,6 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Future Work**
-
-- **Advanced Person Segmentation:** Integrate deep learning-based segmentation models like Mask R-CNN for more accurate and reliable person detection.
-  
-- **Real-Time Processing:** Optimize the pipeline for real-time applications by leveraging more efficient models or deploying on specialized hardware.
-
-- **User Interface:** Develop a simple GUI to allow users to adjust parameters like flow threshold, brightness scaling, and depth influence interactively.
-
-- **Batch Processing:** Enhance the script to handle batch processing of multiple videos simultaneously, improving scalability.
-
-- **Enhanced Visual Effects:** Explore additional visual effects such as motion trails, color grading based on flow direction, or integrating other sensory data for richer representations.
-
----
-
 ## **Contact**
 
 For any questions, feedback, or further discussions, please reach out:
