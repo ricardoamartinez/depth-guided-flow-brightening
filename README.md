@@ -31,7 +31,12 @@ This project implements a video processing pipeline that integrates optical flow
 
 ## **Example Output** 📹
 
-![output_visualization](https://github.com/user-attachments/assets/300ad93f-55fb-4eb0-9c8c-9d2f4bf14f4b)
+https://user-images.githubusercontent.com/300ad93f-55fb-4eb0-9c8c-9d2f4bf14f4b
+
+<!-- Fallback image/link in case embed doesn't load -->
+<video width="100%" controls>
+  <source src="https://user-images.githubusercontent.com/300ad93f-55fb-4eb0-9c8c-9d2f4bf14f4b" type="video/mp4">
+</video>
 
 <!-- Remove the other options since we now have the proper GitHub URL -->
 
