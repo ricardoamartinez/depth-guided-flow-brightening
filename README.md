@@ -2,7 +2,7 @@
 
 ## **Objective**
 
-Create a processing pipeline that estimates optical flow in a video and brightens high-flow regions, ensuring that motion closer to the camera appears brighter than motion farther away. This prototype is intended for an internal review meeting and showcases the ability to handle optical flow estimation, depth map integration, and dynamic visual effect generation.
+Create a processing pipeline that estimates optical flow in a video and brightens high-flow regions, ensuring that motion closer to the camera appears brighter than motion farther away.
 
 ---
 
@@ -29,18 +29,7 @@ Create a processing pipeline that estimates optical flow in a video and brighten
 
 ## **Overview**
 
-This project implements a video processing pipeline that leverages optical flow and depth maps to dynamically highlight motion within video sequences. The primary goal is to enhance visual regions with significant movement, especially those closer to the camera, thereby creating an engaging and informative visual effect.
-
----
-
-## **Features**
-
-- **Optical Flow Estimation**: Utilizes advanced ML-based models to estimate motion between consecutive video frames.
-- **Depth Map Integration**: Incorporates per-frame depth information to modulate the intensity of the visual effect based on object proximity.
-- **Dynamic Brightening**: Enhances regions with high motion, with brightness scaled according to depth data.
-- **Video Output**: Compiles processed frames into a coherent output video showcasing the visual effects.
-- **Modular Design**: Organized codebase facilitating easy maintenance and scalability.
-- **Optional Extensions**: Implements advanced features like scene flow estimation and optical flow flicker reduction.
+This project implements a video processing pipeline that integrates optical flow and depth maps to dynamically highlight motion within video sequences. The primary goal is to enhance visual regions with significant movement, especially those closer to the camera.
 
 ---
 
@@ -261,12 +250,9 @@ DepthGuidedFlowBrightening/
 
 For any questions, feedback, or further discussions, please reach out:
 
-- **Andrew**  
-  Phone: +1 408.320.5494 (US/Canada)  
-  Email: [andrew@wistlabs.com](mailto:andrew@wistlabs.com)
-
-- **Michael**  
-  GitHub: [michaeloder](https://github.com/michaeloder)
+- **Ricardo Alexander Martinez**  
+  Phone: +1 832.792.9265  
+  Email: [martricardo.a@gmail.com](mailto:martricardo.a@gmail.com)
 
 ---
 
