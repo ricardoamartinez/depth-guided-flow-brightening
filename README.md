@@ -316,8 +316,6 @@ python -m unittest discover -s tests
 
 ## **Final Notes**
 
-This prototype serves as a foundational implementation for depth-guided optical flow visual effects. It balances between computational efficiency and visual quality, providing a scalable framework for further enhancements and feature integrations.
-
 Feel free to explore, modify, and extend this project to better suit specific requirements or to incorporate additional functionalities that showcase advanced skills in computer vision and machine learning.
 
 ---
