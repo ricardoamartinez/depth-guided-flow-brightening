@@ -31,12 +31,9 @@ This project implements a video processing pipeline that integrates optical flow
 
 ## **Example Output** 📹
 
-https://github.com/armthethinker/DepthGuidedFlowBrightening/assets/example.mp4
+![output_visualization](https://github.com/user-attachments/assets/300ad93f-55fb-4eb0-9c8c-9d2f4bf14f4b)
 
-<video width="100%" controls>
-  <source src="assets/example.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+<!-- Remove the other options since we now have the proper GitHub URL -->
 
 ---
 
