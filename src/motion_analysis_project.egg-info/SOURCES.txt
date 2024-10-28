@@ -1,0 +1,13 @@
+README.md
+setup.py
+src/motion_analysis/__init__.py
+src/motion_analysis/motion_analyzer.py
+src/motion_analysis/person_segmentation.py
+src/motion_analysis_project.egg-info/PKG-INFO
+src/motion_analysis_project.egg-info/SOURCES.txt
+src/motion_analysis_project.egg-info/dependency_links.txt
+src/motion_analysis_project.egg-info/entry_points.txt
+src/motion_analysis_project.egg-info/requires.txt
+src/motion_analysis_project.egg-info/top_level.txt
+tests/test_motion_analyzer.py
+tests/test_person_segmentation.py

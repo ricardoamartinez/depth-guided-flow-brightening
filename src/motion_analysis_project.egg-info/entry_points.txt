@@ -1,0 +1,2 @@
+[console_scripts]
+process_video = motion_analysis.scripts.process_video:main

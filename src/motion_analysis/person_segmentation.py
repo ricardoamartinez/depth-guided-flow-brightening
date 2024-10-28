@@ -1,40 +1,54 @@
-# src/motion_analysis/person_segmentation.py
-
 import cv2
 import numpy as np
+import mediapipe as mp
 
 class PersonSegmenter:
-    """
-    PersonSegmenter class for segmenting persons in video frames.
-    Currently uses a simple background subtractor as a placeholder.
-    """
-
     def __init__(self):
-        """
-        Initialize the person segmentation model.
-        Replace this with actual model initialization if using a pre-trained model.
-        """
-        # Example: Using a simple background subtractor as a placeholder
-        self.back_sub = cv2.createBackgroundSubtractorMOG2(history=500, detectShadows=False)
-
+        # Initialize MediaPipe
+        self.mp_selfie_segmentation = mp.solutions.selfie_segmentation
+        self.segmenter = self.mp_selfie_segmentation.SelfieSegmentation(model_selection=1)
+        
     def get_person_mask(self, frame):
         """
-        Returns a binary mask where persons are detected.
-        
-        Args:
-            frame (np.ndarray): Current frame
-        
-        Returns:
-            np.ndarray: Binary person mask
+        Get person segmentation mask using MediaPipe with stricter inward masking
         """
-        fg_mask = self.back_sub.apply(frame)
+        # Convert BGR to RGB
+        if len(frame.shape) == 3 and frame.shape[2] == 3:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        else:
+            frame_rgb = frame
+            
+        # Get segmentation mask
+        results = self.segmenter.process(frame_rgb)
+        if results.segmentation_mask is None:
+            return np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
+            
+        mask = results.segmentation_mask
         
-        # Threshold the mask to remove shadows (if any)
-        _, fg_mask = cv2.threshold(fg_mask, 250, 1, cv2.THRESH_BINARY)
+        # Higher threshold for initial mask
+        mask_binary = (mask > 0.8).astype(np.uint8)  # Reduced threshold back to 0.8
         
-        # Perform morphological operations to clean up the mask
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-        fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, kernel, iterations=2)
+        # Find contours
+        contours, _ = cv2.findContours(mask_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        return fg_mask.astype(np.float32)
+        # Create strict mask from largest contour
+        strict_mask = np.zeros_like(mask_binary)
+        if contours:
+            # Get largest contour
+            largest_contour = max(contours, key=cv2.contourArea)
+            
+            # Create eroded mask with gradient
+            cv2.drawContours(strict_mask, [largest_contour], -1, 1, -1)
+            
+            # Simplified masking approach
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+            eroded = cv2.erode(strict_mask, kernel, iterations=2)
+            strict_mask = cv2.dilate(eroded, kernel, iterations=1)
+            
+            # Ensure binary mask (0 or 1)
+            strict_mask = (strict_mask > 0.5).astype(np.float32)
+        
+        return strict_mask
+        
+    def __del__(self):
+        self.segmenter.close()
