@@ -1,6 +1,6 @@
-# Depth-Guided Flow Brightening Visual Effect
+# Depth-Guided Flow Brightening Visual Effect 🌊✨
 
-## **Objective**
+## **Objective** 🎯
 
 Create a processing pipeline that estimates optical flow in a video and brightens high-flow regions, ensuring that motion closer to the camera appears brighter than motion farther away.
 
@@ -25,13 +25,22 @@ Create a processing pipeline that estimates optical flow in a video and brighten
 
 ---
 
-## **Overview**
+## **Overview** 🔍
 
 This project implements a video processing pipeline that integrates optical flow and depth maps to dynamically highlight motion within video sequences. The primary goal is to enhance visual regions with significant movement, especially those closer to the camera.
 
+## **Example Output** 📹
+
+https://github.com/armthethinker/DepthGuidedFlowBrightening/assets/example.mp4
+
+<video width="100%" controls>
+  <source src="assets/example.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ---
 
-## **Project Structure**
+## **Project Structure** 📁
 
 ```
 DepthGuidedFlowBrightening/
@@ -59,7 +68,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Installation**
+## **Installation** 💻
 
 1. **Clone the Repository**
 
@@ -85,7 +94,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Usage**
+## **Usage** 🚀
 
 1. **Prepare Input Files**
 
@@ -134,22 +143,22 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Processing Steps**
+## **Processing Steps** ⚙️
 
-### 1. **Optical Flow Estimation**
+### 1. **Optical Flow Estimation** 🌊
 
 - **Method Used:** Utilized the [RAFT](https://github.com/princeton-vl/RAFT) (Recurrent All Pairs Field Transforms) model for high-accuracy optical flow estimation.
 - **Implementation:**
     - Each pair of consecutive frames is processed to estimate the optical flow vectors.
     - The flow magnitude and direction are computed to identify regions with significant motion.
 
-### 2. **Brightening High-Flow Regions**
+### 2. **Brightening High-Flow Regions** ✨
 
 - **Approach:**
     - Regions with optical flow magnitude above a certain threshold are identified as high-flow areas.
     - These regions are brightened by scaling their pixel intensity based on the flow magnitude.
 
-### 3. **Depth-Guided Brightening**
+### 3. **Depth-Guided Brightening** 📏
 
 - **Integration with Depth Maps:**
     - Each frame's corresponding depth map is used to determine the proximity of moving objects.
@@ -158,7 +167,7 @@ DepthGuidedFlowBrightening/
     - The depth maps are normalized and inverted to ensure that closer objects have higher brightness scaling factors.
     - The brightened regions are modulated by the depth-based scaling to achieve the desired effect.
 
-### 4. **Exporting the Modified Video**
+### 4. **Exporting the Modified Video** 🎥
 
 - **Process:**
     - Modified frames with the applied visual effects are compiled back into a video using FFMPEG.
@@ -166,7 +175,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Performance Metrics**
+## **Performance Metrics** 📊
 
 - **Optical Flow Estimation:**
     - **Time per Frame:** Approximately 0.2 seconds using RAFT on an NVIDIA RTX 2080 GPU.
@@ -184,7 +193,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Trade-offs, Assumptions, and Limitations**
+## **Trade-offs, Assumptions, and Limitations** ⚖️
 
 ### **Trade-offs**
 
@@ -210,7 +219,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Optional Extensions**
+## **Optional Extensions** 🔧
 
 1. **Reduce Optical Flow Flicker**
 
@@ -230,7 +239,7 @@ DepthGuidedFlowBrightening/
 
 ---
 
-## **Contact**
+## **Contact** 📫
 
 For any questions, feedback, or further discussions, please reach out:
 
@@ -240,13 +249,13 @@ For any questions, feedback, or further discussions, please reach out:
 
 ---
 
-## **License**
+## **License** 📜
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## **Acknowledgements**
+## **Acknowledgements** 🙏
 
 - **RAFT Optical Flow Model:** [Princeton Vision Lab](https://github.com/princeton-vl/RAFT)
 - **OpenCV:** [Open Source Computer Vision Library](https://opencv.org/)
@@ -256,7 +265,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-## **Appendix**
+## **Appendix** 📚
 
 ### **Sample FFMPEG Commands**
 
