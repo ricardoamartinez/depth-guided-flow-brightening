@@ -105,6 +105,12 @@ Run the pipeline with FastFlowNet (recommended):
 python src/scripts/process_video.py --flow_method fastflownet
 ```
 
+Or use Farneback method (CPU-friendly alternative):
+
+```bash
+python src/scripts/process_video.py --flow_method farneback
+```
+
 For more detailed usage and configuration options, see the [Usage](#usage) section below.
 
 ---
