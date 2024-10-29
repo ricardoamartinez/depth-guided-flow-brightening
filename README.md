@@ -76,7 +76,7 @@ DepthGuidedFlowBrightening/
 1. **Clone the Repository**
 
     ```bash
-    git clone https://github.com/armthethinker/DepthGuidedFlowBrightening.git
+    git clone https://github.com/ricardoamartinez/depth-guided-flow-brightening.git
     cd DepthGuidedFlowBrightening
     ```
 
