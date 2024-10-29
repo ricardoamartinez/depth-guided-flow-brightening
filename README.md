@@ -11,17 +11,18 @@ Create a processing pipeline that estimates optical flow in a video and brighten
 1. [Overview](#overview)
 2. [Project Structure](#project-structure)
 3. [Installation](#installation)
-4. [Usage](#usage)
-5. [Processing Steps](#processing-steps)
+4. [Quick Start](#quick-start)
+5. [Usage](#usage)
+6. [Processing Steps](#processing-steps)
     - [1. Optical Flow Estimation](#1-optical-flow-estimation)
     - [2. Brightening High-Flow Regions](#2-brightening-high-flow-regions)
     - [3. Depth-Guided Brightening](#3-depth-guided-brightening)
     - [4. Exporting the Modified Video](#4-exporting-the-modified-video)
-6. [Performance Metrics](#performance-metrics)
-7. [Trade-offs, Assumptions, and Limitations](#trade-offs-assumptions-and-limitations)
-8. [Optional Extensions](#optional-extensions)
-9. [Contact](#contact)
-10. [License](#license)
+7. [Performance Metrics](#performance-metrics)
+8. [Trade-offs, Assumptions, and Limitations](#trade-offs-assumptions-and-limitations)
+9. [Optional Extensions](#optional-extensions)
+10. [Contact](#contact)
+11. [License](#license)
 
 ---
 
@@ -93,6 +94,18 @@ DepthGuidedFlowBrightening/
     ```
 
     > **Note:** If you plan to use advanced models for person segmentation or optical flow (e.g., TensorFlow, PyTorch), ensure to include and install those dependencies.
+
+---
+
+## **Quick Start** 🚀
+
+Run the pipeline with FastFlowNet (recommended):
+
+```bash
+python src/scripts/process_video.py --flow_method fastflownet
+```
+
+For more detailed usage and configuration options, see the [Usage](#usage) section below.
 
 ---
 
