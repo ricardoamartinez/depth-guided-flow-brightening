@@ -210,7 +210,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
         start_time = time.time()  # Add start time for statistics
         frame_idx = 0  # Initialize frame_idx here
         depth_idx = 0  # Initialize depth_idx here
-        
+
         # Create layout with adjusted sizes
         layout = Layout()
         layout.split_column(
@@ -222,7 +222,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
             Layout(name="settings"),
             Layout(name="progress")
         )
-        
+
         # Initialize statistics with better formatting
         stats = {
             "Frames Processed": "0",
@@ -230,7 +230,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
             "Current Memory Usage": "0 MB",
             "Elapsed Time": "0:00:00"
         }
-        
+
         # Create initial stats panel
         stats_panel = create_stats_panel(stats)
         layout["footer"].update(stats_panel)
@@ -244,14 +244,14 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
             "Target Width": f"{target_width}px",
             "Preset": preset.upper()
         }
-        
+
         with Live(layout, refresh_per_second=4, screen=True) as live:
             # Update header
             layout["header"].update(create_header())
-            
+
             # Update settings panel
             layout["settings"].update(create_settings_panel(settings))
-            
+
             progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
@@ -262,7 +262,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 transient=False,
                 refresh_per_second=4
             )
-            
+
             # Add tasks
             process_task = progress.add_task(
                 f"[cyan]Processing Video[/cyan] 🎥",
@@ -288,12 +288,12 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
             # Create progress panel once
             progress_panel = Panel(progress, title="Progress", border_style="blue")
             layout["progress"].update(progress_panel)
-            
+
             # Batch updates for smoother display
             update_batch_size = 5  # Update every 5 frames
             frames_since_update = 0
             last_update = time.time()
-            
+
             # Initialize metrics tracking
             cpu_loads = []
             gpu_utils = []
@@ -311,7 +311,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 current_memory = process.memory_info().rss / 1024 / 1024  # MB
                 memory_usage.append(current_memory)
                 cpu_loads.append(psutil.cpu_percent())
-                
+
                 try:
                     import pynvml
                     pynvml.nvmlInit()
@@ -325,7 +325,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 frame_metrics.append([
                     time.time() - start_time,  # processing time
                     current_memory,            # memory usage
-                    frame_idx / (time.time() - start_time),  # current fps
+                    frame_idx / (time.time() - start_time) if time.time() - start_time > 0 else 0,  # current fps
                     psutil.cpu_percent(),      # cpu load
                     gpu_util                   # gpu utilization
                 ])
@@ -435,15 +435,23 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 prev_gray = gray.copy()
                 frame_idx += 1
                 frames_since_update += 1  # ✅ Add counter increment
+
+                # Update progress tasks
+                progress.update(process_task, advance=1)
+                progress.update(flow_task, advance=1)
+                progress.update(depth_task, advance=1)
+                progress.update(highlight_task, advance=1)
+
+                # Collect system metrics every frame
                 current_time = time.time()
-                
-                # Update progress and collect stats
+
+                # Update statistics every `update_batch_size` frames
                 if frames_since_update >= update_batch_size:
                     stats = {
                         'frames_processed': frame_idx,
-                        'average_fps': frame_idx / (time.time() - start_time),
+                        'average_fps': frame_idx / (time.time() - start_time) if (time.time() - start_time) > 0 else 0,
                         'peak_memory_mb': max(memory_usage) if memory_usage else 0,
-                        'total_time': datetime.timedelta(seconds=int(time.time() - start_time)),
+                        'total_time': str(datetime.timedelta(seconds=int(time.time() - start_time))),
                         'avg_cpu_load': np.mean(cpu_loads) if cpu_loads else 0,
                         'avg_gpu_util': np.mean(gpu_utils) if gpu_utils else 0,
                         'frame_metrics': frame_metrics,
@@ -500,6 +508,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 title="✅ Success",
                 border_style="green"
             ))
+
 
 def main():
     """
