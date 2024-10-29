@@ -1,9 +1,43 @@
 # src/motion_analysis/motion_analyzer.py
 
+# Suppress TensorFlow and other warnings
+import os
+import warnings
+import logging
+
+# Suppress TensorFlow logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# Suppress warnings
+warnings.filterwarnings('ignore')
+
+# Suppress warnings from TensorFlow and other libraries
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+logging.getLogger('mediapipe').setLevel(logging.ERROR)
+
 import cv2
 import numpy as np
 from collections import deque
 from .person_segmentation import PersonSegmenter
+import torch
+from pathlib import Path
+import sys
+from rich.console import Console
+
+# Import flow methods
+from .flow_methods import load_fastflownet_model
+
+# Try importing TensorRT support, but don't fail if not available
+try:
+    from .tensorrt_flow import FastFlowNetTRT
+    TENSORRT_AVAILABLE = True
+except ImportError:
+    TENSORRT_AVAILABLE = False
+
+console = Console()
+
+# Suppress PyTorch future warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 class MotionAnalyzer:
     """
@@ -94,7 +128,7 @@ class MotionAnalyzer:
         }
     }
 
-    def __init__(self, threshold_flow=0.5, threshold_dark=0.0, contrast_sensitivity=0.0, flow_brightness=1.0, preset='balanced'):
+    def __init__(self, threshold_flow=0.5, threshold_dark=0.0, contrast_sensitivity=0.0, flow_brightness=1.0, preset='balanced', flow_method='farneback'):
         """
         Initialize the MotionAnalyzer with a preset configuration.
         
@@ -104,6 +138,7 @@ class MotionAnalyzer:
             contrast_sensitivity (float): Normalized contrast sensitivity [0.0, 1.0]
             flow_brightness (float): Controls brightness of optical flow visualization (0.5 to 3.0)
             preset (str): One of 'speed', 'balanced', 'quality', or 'max_quality'
+            flow_method (str): One of 'farneback' or 'fastflownet'
         """
         # Load preset configuration
         config = self.PRESETS[preset]
@@ -122,17 +157,109 @@ class MotionAnalyzer:
         # Initialize person segmenter
         self.person_segmenter = PersonSegmenter()
 
+        self.flow_method = flow_method
+        self.console = Console()
+        
+        if flow_method == 'fastflownet':
+            # Try TensorRT first if available
+            if TENSORRT_AVAILABLE:
+                try:
+                    self.model = FastFlowNetTRT()
+                    self.console.print("[green]Using FastFlowNet with TensorRT optimization[/green]")
+                    return
+                except Exception as e:
+                    self.console.print(f"[yellow]TensorRT initialization failed: {e}[/yellow]")
+            
+            # Fall back to PyTorch implementation
+            self.console.print("[cyan]Using FastFlowNet with PyTorch[/cyan]")
+            self.model = load_fastflownet_model()
+            
+            if self.model is None:
+                self.console.print("[red]FastFlowNet is not available. Falling back to Farneback method[/red]")
+                self.flow_method = 'farneback'
+
     def compute_optical_flow(self, prev_gray, curr_gray):
         """
-        High-precision motion detection using Farneback's dense optical flow.
-        
-        Args:
-            prev_gray (np.ndarray): Previous grayscale frame
-            curr_gray (np.ndarray): Current grayscale frame
-        
-        Returns:
-            np.ndarray: Optical flow
+        Compute optical flow using selected method
         """
+        if self.flow_method == 'fastflownet':
+            with torch.cuda.amp.autocast():
+                # Get original dimensions
+                height, width = prev_gray.shape
+                
+                # Calculate target dimensions (must be multiples of 32)
+                target_height = 384  # Fixed height for FastFlowNet
+                target_width = 512   # Fixed width for FastFlowNet
+                
+                # Resize images to FastFlowNet's expected dimensions
+                prev_resized = cv2.resize(prev_gray, (target_width, target_height))
+                curr_resized = cv2.resize(curr_gray, (target_width, target_height))
+                
+                # Convert grayscale to RGB by repeating channels
+                prev_rgb = np.stack([prev_resized] * 3, axis=-1)
+                curr_rgb = np.stack([curr_resized] * 3, axis=-1)
+                
+                # Convert to float and normalize to [0, 1]
+                prev_tensor = torch.from_numpy(prev_rgb).float().permute(2, 0, 1) / 255.0
+                curr_tensor = torch.from_numpy(curr_rgb).float().permute(2, 0, 1) / 255.0
+                
+                # Add batch dimension: [B, C, H, W]
+                prev_tensor = prev_tensor.unsqueeze(0)
+                curr_tensor = curr_tensor.unsqueeze(0)
+                
+                if torch.cuda.is_available():
+                    prev_tensor = prev_tensor.cuda(non_blocking=True)
+                    curr_tensor = curr_tensor.cuda(non_blocking=True)
+                
+                # Debug shapes
+                if not hasattr(self, '_shape_checked'):
+                    self.console.print(f"[cyan]Input shapes - Original: {(height, width)}, FastFlowNet: {(target_height, target_width)}[/cyan]")
+                    self.console.print(f"[cyan]Tensor shapes - Prev: {prev_tensor.shape}, Curr: {curr_tensor.shape}[/cyan]")
+                    self._shape_checked = True
+                
+                with torch.no_grad():
+                    # Stack inputs for FastFlowNet
+                    inputs = torch.cat([prev_tensor, curr_tensor], dim=1)  # [B, 6, H, W]
+                    
+                    try:
+                        # Get flow prediction
+                        flow = self.model(inputs)
+                        
+                        # Convert flow to numpy and reshape
+                        flow = flow.squeeze(0).permute(1, 2, 0).cpu().numpy()
+                        
+                        # Create resized flow field
+                        flow_resized = np.zeros((height, width, 2), dtype=np.float32)
+                        
+                        # Scale flow values according to dimension change
+                        scale_y = height / target_height
+                        scale_x = width / target_width
+                        
+                        # Ensure flow components are valid for resize
+                        flow_x = flow[..., 0].astype(np.float32)
+                        flow_y = flow[..., 1].astype(np.float32)
+                        
+                        # Resize flow components using interpolation
+                        flow_x_resized = cv2.resize(flow_x, (width, height), interpolation=cv2.INTER_LINEAR)
+                        flow_y_resized = cv2.resize(flow_y, (width, height), interpolation=cv2.INTER_LINEAR)
+                        
+                        # Scale flow values
+                        flow_resized[..., 0] = flow_x_resized * scale_x
+                        flow_resized[..., 1] = flow_y_resized * scale_y
+                        
+                        # Scale flow values to match expected range
+                        flow_resized = flow_resized * 20.0  # Adjust this scaling factor if needed
+                        
+                        return flow_resized
+                        
+                    except Exception as e:
+                        self.console.print(f"[red]FastFlowNet error at shape {inputs.shape}: {str(e)}[/red]")
+                        raise
+        else:
+            return self._compute_farneback_flow(prev_gray, curr_gray)
+            
+    def _compute_farneback_flow(self, prev_gray, curr_gray):
+        """Original Farneback implementation"""
         flow = cv2.calcOpticalFlowFarneback(
             prev_gray,
             curr_gray,
@@ -145,29 +272,13 @@ class MotionAnalyzer:
     def estimate_global_motion(self, prev_gray, curr_gray):
         """
         Advanced camera motion compensation system.
-        
-        Uses a two-stage approach:
-        1. Feature Detection & Tracking
-           - Identifies stable points in the scene
-           - Tracks their movement between frames
-        
-        2. Homography Estimation
-           - Calculates geometric transform between frames
-           - Filters out outliers using RANSAC
-           
-        This helps distinguish between:
-        - Intentional subject motion (preserved)
-        - Unwanted camera shake (removed)
-        
-        Returns stabilized optical flow that focuses on true motion.
-        
-        Args:
-            prev_gray (np.ndarray): Previous grayscale frame
-            curr_gray (np.ndarray): Current grayscale frame
-        
-        Returns:
-            np.ndarray: Stabilized optical flow
+        Only used with Farneback method.
         """
+        if self.flow_method == 'fastflownet':
+            # FastFlowNet should use compute_optical_flow directly
+            raise RuntimeError("estimate_global_motion should not be called with FastFlowNet")
+        
+        # Original Farneback with camera motion compensation
         # Estimate global motion using Lucas-Kanade method on feature points
         feature_params = dict(
             maxCorners=50,     # Reduced from 200 to 50 for performance
@@ -200,15 +311,7 @@ class MotionAnalyzer:
         warped_prev_gray = cv2.warpPerspective(prev_gray, H, (width, height))
 
         # Compute optical flow on stabilized frames
-        flow = cv2.calcOpticalFlowFarneback(
-            warped_prev_gray,
-            curr_gray,
-            None,
-            **self.flow_params,
-            flags=0
-        )
-
-        return flow
+        return self.compute_optical_flow(warped_prev_gray, curr_gray)
 
     def generate_flow_mask(self, flow, frame):
         """
@@ -346,3 +449,19 @@ class MotionAnalyzer:
         highlight_mask = cv2.GaussianBlur(highlight_mask, (9, 9), 0)
 
         return np.clip(highlight_mask, 0, 1)
+
+    @staticmethod
+    def select_flow_method():
+        """Interactive method selection using Rich"""
+        console = Console()
+        console.print("\n[bold]Available Optical Flow Methods:[/bold]")
+        console.print("1. [cyan]Farneback[/cyan] - CPU-based, moderate speed & accuracy")
+        console.print("2. [cyan]FastFlowNet[/cyan] - GPU-based, high speed & accuracy (requires CUDA)\n")
+        
+        choice = Prompt.ask(
+            "Select method",
+            choices=["1", "2"],
+            default="1"
+        )
+        
+        return 'farneback' if choice == "1" else 'fastflownet'

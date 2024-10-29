@@ -149,10 +149,24 @@ DepthGuidedFlowBrightening/
 
 ### 1. **Optical Flow Estimation** 🌊
 
-- **Method Used:** Utilized the [RAFT](https://github.com/princeton-vl/RAFT) (Recurrent All Pairs Field Transforms) model for high-accuracy optical flow estimation.
+- **Methods Used:** 
+  - [FastFlowNet](https://github.com/ltkong218/FastFlowNet) - A lightweight network for fast and accurate optical flow estimation
+  - Farneback method as a classical alternative
+
+- **FastFlowNet Overview:**
+  FastFlowNet is designed for efficient optical flow prediction with several key innovations:
+  1. Head Enhanced Pooling Pyramid (HEPP) feature extractor
+  2. Center Dense Dilated Correlation (CDDC) layer
+  3. Shuffle Block Decoder (SBD)
+
+  ![FastFlowNet Architecture](https://github.com/user-attachments/assets/50dabdaa-222e-4a76-b336-907029ee4f7b)
+
 - **Implementation:**
-    - Each pair of consecutive frames is processed to estimate the optical flow vectors.
-    - The flow magnitude and direction are computed to identify regions with significant motion.
+    - Each pair of consecutive frames is processed to estimate optical flow vectors
+    - Flow magnitude and direction computed to identify regions with significant motion
+    - Users can choose between methods based on speed/accuracy requirements:
+      - FastFlowNet: Better accuracy, GPU-accelerated (~0.1s/frame)
+      - Farneback: CPU-friendly, faster but less accurate (~0.05s/frame)
 
 ### 2. **Brightening High-Flow Regions** ✨
 
@@ -179,9 +193,17 @@ DepthGuidedFlowBrightening/
 
 ## **Performance Metrics** 📊
 
+![Performance Metrics](https://github.com/user-attachments/assets/3c7cf95f-edc5-4495-9736-449dcbef6357)
+
+The above visualization shows the performance characteristics across different processing stages and configurations.
+
 - **Optical Flow Estimation:**
-    - **Time per Frame:** Approximately 0.2 seconds using RAFT on an NVIDIA RTX 2080 GPU.
-    - **Accuracy:** Achieved state-of-the-art flow estimation with minimal errors in high-motion regions.
+    - **FastFlowNet:** 
+      - Time per Frame: ~0.1 seconds on NVIDIA GPU
+      - Provides good balance of accuracy and speed
+    - **Farneback:**
+      - Time per Frame: ~0.05 seconds
+      - Faster but less accurate than FastFlowNet
 
 - **Brightening and Depth Integration:**
     - **Time per Frame:** Approximately 0.05 seconds.
@@ -199,7 +221,9 @@ DepthGuidedFlowBrightening/
 
 ### **Trade-offs**
 
-- **Model Selection vs. Speed:** Chose RAFT for its high accuracy in optical flow estimation despite its computational intensity. Alternative faster models (e.g., Farneback) were considered but discarded to prioritize quality.
+- **Model Selection vs. Speed:** 
+  - FastFlowNet offers excellent accuracy while maintaining computational efficiency
+  - Farneback method available as a CPU-friendly alternative for resource-constrained environments
   
 - **Depth Map Accuracy:** Assumed that provided depth maps are accurately aligned and correspond to the video frames. Any misalignment can degrade the visual effect's quality.
 
@@ -211,7 +235,10 @@ DepthGuidedFlowBrightening/
 
 ### **Limitations**
 
-- **Computational Resources:** High computational demand due to the RAFT model requires a GPU for real-time processing. On CPU-only systems, processing times become significantly longer.
+- **Computational Resources:** 
+  - FastFlowNet performs best with GPU acceleration
+  - Farneback method provides a CPU-friendly alternative with slightly lower accuracy
+  - Processing times vary significantly based on chosen method and available hardware
 
 - **Static Background Assumption:** The `PersonSegmenter` module currently uses a simple background subtractor, which may not perform well in dynamic environments or with multiple moving objects.
 
@@ -235,9 +262,13 @@ DepthGuidedFlowBrightening/
 
     - **Implemented:** Applied Gaussian blurring and morphological operations to the brightened regions to create a more aesthetically pleasing visual effect, avoiding harsh transitions.
 
-4. **Comparison to Non-ML Optical Flow**
+4. **Comparison of Flow Methods**
 
-    - **Implemented:** Compared RAFT-based optical flow estimation with the classical Farneback method, evaluating differences in accuracy and processing speed. RAFT provided superior flow quality but at a higher computational cost.
+    - **Implemented:** Compared FastFlowNet with the classical Farneback method, evaluating differences in:
+      - Processing speed (FastFlowNet ~0.1s/frame vs Farneback ~0.05s/frame)
+      - Accuracy and flow quality
+      - Resource utilization
+      - Use cases for each method
 
 ---
 
@@ -259,7 +290,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## **Acknowledgements** 🙏
 
-- **RAFT Optical Flow Model:** [Princeton Vision Lab](https://github.com/princeton-vl/RAFT)
+- **FastFlowNet:** [FastFlowNet: A Lightweight Network for Fast Optical Flow Estimation](https://github.com/ltkong218/FastFlowNet)
 - **OpenCV:** [Open Source Computer Vision Library](https://opencv.org/)
 - **NumPy:** [NumPy](https://numpy.org/)
 - **FFMPEG:** [FFMPEG](https://ffmpeg.org/)

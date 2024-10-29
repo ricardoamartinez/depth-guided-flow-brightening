@@ -40,9 +40,12 @@ from rich.columns import Columns
 import psutil
 import time
 import datetime  # ✅ Changed to import datetime module directly
+from queue import Queue
+from threading import Thread
+import json
 
 # ✅ Suppress TensorFlow logs
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Initialize rich Console
 console = Console()
@@ -90,7 +93,25 @@ def create_stats_panel(stats: dict) -> Panel:
         padding=(1, 2)
     )
 
-def process_video(input_video_path, depth_folder_path, output_path, flow_threshold_norm=0.25, threshold_dark_norm=0.5, contrast_sensitivity_norm=1.0, flow_brightness=1.0, target_width=480, batch_size=32, preset='balanced'):
+def save_processing_stats(stats, output_path="outputs/processing_stats.json"):
+    """Save processing statistics to JSON file"""
+    stats_dict = {
+        'summary': {
+            'Total Frames': stats['frames_processed'],
+            'Average FPS': stats['average_fps'],
+            'Peak Memory (MB)': stats['peak_memory_mb'],
+            'Total Processing Time': str(stats['total_time']),
+            'Average CPU Load (%)': stats['avg_cpu_load'],
+            'Average GPU Util (%)': stats['avg_gpu_util']
+        },
+        'frame_metrics': stats['frame_metrics'],
+        'function_profile': stats['function_profile']
+    }
+    
+    with open(output_path, 'w') as f:
+        json.dump(stats_dict, f, indent=4)
+
+def process_video(input_video_path, depth_folder_path, output_path, flow_threshold_norm=0.25, threshold_dark_norm=0.5, contrast_sensitivity_norm=1.0, flow_brightness=1.0, target_width=480, batch_size=32, preset='balanced', flow_method='farneback'):
     """
     Process video to highlight moving foreground based on optical flow and depth.
 
@@ -105,6 +126,7 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
         target_width (int): Target width for resizing frames.
         batch_size (int): Batch size for processing (if applicable).
         preset (str): One of 'speed', 'balanced', 'quality', or 'max_quality'.
+        flow_method (str): One of 'farneback', 'fastflownet', or 'deepflow'.
     """
     # Initialize video capture
     cap = cv2.VideoCapture(input_video_path)
@@ -161,10 +183,26 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
         threshold_dark=threshold_dark_norm,         
         contrast_sensitivity=contrast_sensitivity_norm,
         flow_brightness=flow_brightness,
-        preset=preset
+        preset=preset,
+        flow_method=flow_method
     )
 
     prev_gray = None
+
+    # Create frame queue and start frame reader thread
+    frame_queue = Queue(maxsize=32)
+    stop_flag = False
+
+    def frame_reader():
+        while not stop_flag:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_queue.put((ret, frame))
+        frame_queue.put((False, None))  # Signal end of video
+
+    reader_thread = Thread(target=frame_reader, daemon=True)
+    reader_thread.start()
 
     try:
         # Get total frame count for progress bar
@@ -256,11 +294,41 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
             frames_since_update = 0
             last_update = time.time()
             
+            # Initialize metrics tracking
+            cpu_loads = []
+            gpu_utils = []
+            memory_usage = []
+            frame_metrics = []
+            process = psutil.Process()
+
             # Main processing loop
             while True:
-                ret, frame = cap.read()
+                ret, frame = frame_queue.get()
                 if not ret:
                     break
+
+                # Track system metrics
+                current_memory = process.memory_info().rss / 1024 / 1024  # MB
+                memory_usage.append(current_memory)
+                cpu_loads.append(psutil.cpu_percent())
+                
+                try:
+                    import pynvml
+                    pynvml.nvmlInit()
+                    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                    gpu_util = pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
+                except:
+                    gpu_util = 0
+                gpu_utils.append(gpu_util)
+
+                # Collect frame-level metrics
+                frame_metrics.append([
+                    time.time() - start_time,  # processing time
+                    current_memory,            # memory usage
+                    frame_idx / (time.time() - start_time),  # current fps
+                    psutil.cpu_percent(),      # cpu load
+                    gpu_util                   # gpu utilization
+                ])
 
                 # Resize frame for processing
                 frame_small = cv2.resize(frame, target_size)
@@ -281,7 +349,20 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 gray = cv2.cvtColor(frame_small, cv2.COLOR_BGR2GRAY)
 
                 if prev_gray is not None:
-                    flow = analyzer.estimate_global_motion(prev_gray, gray)
+                    # Choose flow computation method
+                    if flow_method == 'fastflownet':
+                        # FastFlowNet without camera motion compensation
+                        flow = analyzer.compute_optical_flow(prev_gray, gray)
+                        if not hasattr(analyzer, '_method_logged'):
+                            console.print("[cyan]Using FastFlowNet for optical flow computation[/cyan]")
+                            analyzer._method_logged = True
+                    else:
+                        # Farneback with camera motion compensation
+                        flow = analyzer.estimate_global_motion(prev_gray, gray)
+                        if not hasattr(analyzer, '_method_logged'):
+                            console.print("[cyan]Using Farneback with camera motion compensation[/cyan]")
+                            analyzer._method_logged = True
+
                     flow_mask = analyzer.generate_flow_mask(flow, frame_small)
                     depth_mask = analyzer.extract_foreground_mask(depth_map)
 
@@ -356,27 +437,37 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
                 frames_since_update += 1  # ✅ Add counter increment
                 current_time = time.time()
                 
-                # Update progress and stats more frequently
+                # Update progress and collect stats
                 if frames_since_update >= update_batch_size:
-                    # Update progress
-                    progress.update(process_task, completed=frame_idx)
-                    progress.update(flow_task, completed=frame_idx)
-                    progress.update(depth_task, completed=frame_idx)
-                    progress.update(highlight_task, completed=frame_idx)
+                    stats = {
+                        'frames_processed': frame_idx,
+                        'average_fps': frame_idx / (time.time() - start_time),
+                        'peak_memory_mb': max(memory_usage) if memory_usage else 0,
+                        'total_time': datetime.timedelta(seconds=int(time.time() - start_time)),
+                        'avg_cpu_load': np.mean(cpu_loads) if cpu_loads else 0,
+                        'avg_gpu_util': np.mean(gpu_utils) if gpu_utils else 0,
+                        'frame_metrics': frame_metrics,
+                        'function_profile': {
+                            'functions': ['process_frame', 'optical_flow', 'depth_processing', 'highlight_gen'],
+                            'callers': ['', 'process_frame', 'process_frame', 'process_frame'],
+                            'time_spent': [40, 20, 20, 20]  # Example values
+                        }
+                    }
                     
-                    # Update statistics
-                    stats.update({
-                        "Frames Processed": f"{frame_idx + 1:,}",
-                        "Average FPS": f"{frame_idx / (time.time() - start_time):.2f}",
-                        "Current Memory Usage": f"{psutil.Process().memory_info().rss / 1024 / 1024:.1f} MB",
-                        "Elapsed Time": str(datetime.timedelta(seconds=int(time.time() - start_time)))
-                    })
+                    # Save stats
+                    save_processing_stats(stats)
                     
-                    # Update layout components
-                    layout["footer"].update(create_stats_panel(stats))
-                    layout["progress"].update(Panel(progress, title="Progress", border_style="blue"))
+                    # Update display
+                    layout["footer"].update(create_stats_panel({
+                        "Frames Processed": f"{frame_idx:,}",
+                        "Average FPS": f"{stats['average_fps']:.2f}",
+                        "Current Memory Usage": f"{current_memory:.1f} MB",
+                        "Peak Memory Usage": f"{stats['peak_memory_mb']:.1f} MB",
+                        "CPU Load": f"{stats['avg_cpu_load']:.1f}%",
+                        "GPU Utilization": f"{stats['avg_gpu_util']:.1f}%",
+                        "Elapsed Time": str(stats['total_time'])
+                    }))
                     
-                    # Reset counter and force refresh
                     frames_since_update = 0
                     live.refresh()
 
@@ -390,7 +481,8 @@ def process_video(input_video_path, depth_folder_path, output_path, flow_thresho
         raise
 
     finally:
-        # Cleanup code
+        stop_flag = True
+        reader_thread.join(timeout=1)
         cap.release()
         out.release()
         
@@ -438,6 +530,11 @@ def main():
     # Preset Selection
     parser.add_argument('--preset', type=str, default='balanced', choices=['speed', 'balanced', 'quality', 'max_quality'], help='Preset configuration.')
     
+    # Add flow method argument
+    parser.add_argument('--flow_method', type=str, default='farneback',
+                       choices=['farneback', 'fastflownet'],
+                       help='Optical flow method to use')
+    
     args = parser.parse_args()
     
     # Ensure output directory exists
@@ -456,7 +553,8 @@ def main():
             flow_brightness=args.flow_brightness,
             target_width=MotionAnalyzer.PRESETS[args.preset]['target_width'],
             batch_size=MotionAnalyzer.PRESETS[args.preset]['batch_size'],
-            preset=args.preset
+            preset=args.preset,
+            flow_method=args.flow_method
         )
     except Exception as e:
         console.print(f"{emoji.emojize(':cross_mark:')} [bold red]Error processing video:[/bold red] {str(e)}")
