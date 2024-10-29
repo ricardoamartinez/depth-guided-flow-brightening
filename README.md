@@ -77,7 +77,7 @@ DepthGuidedFlowBrightening/
 
     ```bash
     git clone https://github.com/ricardoamartinez/depth-guided-flow-brightening.git
-    cd DepthGuidedFlowBrightening
+    cd depth-guided-flow-brightening
     ```
 
 2. **Create a Virtual Environment (Recommended)**
